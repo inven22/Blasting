@@ -527,12 +527,10 @@ Politeknik Negeri Bandung
             now = datetime.now()
             periode_blast_e = email_blast.get('periodeBlastE')
 
-            # Jika belum waktunya
+            # Jika belum waktunya, hanya beri tahu, jangan ubah status
             if periode_blast_e and now < periode_blast_e:
-                cursor.execute("UPDATE emailblast SET statusEmailBlast = 'N' WHERE idEmailBlast = %s", (idEmailBlast,))
-                conn.commit()
                 return jsonify({
-                    "message": "Email blast ditunda karena belum waktunya,Lihat waktu periodeBlastE untuk mengaktifkan ."
+                    "message": f"Email blast belum dapat diaktifkan karena belum waktunya. Jadwal aktif: {periode_blast_e.strftime('%Y-%m-%d %H:%M:%S')}."
                 }), 200
 
             # Jika sudah waktunya dan belum aktif
@@ -625,10 +623,6 @@ Politeknik Negeri Bandung
         finally:
             if cursor: cursor.close()
             if conn: conn.close()
-
-
-
-
 
     def nonaktifkan_email_blast(self, idEmailBlast):
         try:
@@ -780,3 +774,414 @@ Politeknik Negeri Bandung
         finally:
             if cursor: cursor.close()
             if conn: conn.close()
+
+        
+    def blast_email_plulusan(self, data):
+        print("DATA DITERIMA:", data)
+
+        try:
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT COUNT(*) FROM emailblast WHERE namaEmailBlast = %s", (data['namaEmailBlast'],))
+            (count,) = cursor.fetchone()
+            if count > 0:
+                return jsonify({"error": "Nama email blast sudah ada"}), 400
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        finally:
+            if cursor: cursor.close()
+            if conn: conn.close()
+
+        # 🟢 SIMPAN SELALU ke emailblast, meskipun status 'N'
+        idEmailBlast = self.run_blast_job_plulusan(data, insert=True)
+        data['idEmailBlast'] = idEmailBlast  # ⬅️ agar bisa dipakai jika perlu
+
+        # Cek status
+        if data['statusEmailBlast'] == 'N':
+            print("⛔ Status Nonaktif, tidak menjadwalkan blast.")
+            return jsonify({"message": "Email blast disimpan dalam status Nonaktif"}), 200
+
+        # Kalau aktif, lanjutkan ke scheduler
+        try:
+            scheduled_time = datetime.strptime(data['periodeBlastE'], "%Y-%m-%d %H:%M:%S")
+            now = datetime.now()
+
+            if scheduled_time > now:
+                print("⏳ Menjadwalkan email pertama pada:", scheduled_time)
+
+                @copy_current_request_context
+                def scheduled_job():
+                    self.run_blast_job_plulusan(data, insert=False)
+
+                self.scheduler.add_job(
+                    scheduled_job,
+                    trigger='date',
+                    run_date=scheduled_time,
+                    id=f"job_{scheduled_time.strftime('%Y%m%d%H%M%S')}_{data['namaEmailBlast']}",
+                    replace_existing=True
+                )
+
+                return jsonify({"message": f"Email pertama dijadwalkan pada {scheduled_time}."}), 200
+
+            else:
+                return self.run_blast_job_plulusan(data, insert=False)
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
+
+
+    def run_blast_job_plulusan(self, data, insert=False):
+        try:
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor(dictionary=True)
+
+            status_blast = data.get('statusEmailBlast')
+            subject = data['subjek']
+            nama_email_blast = data['namaEmailBlast']
+            tanggal_mulai = data['tanggalMulaiEmailBlast']
+            tanggal_selesai = data['tanggalSelesaiEmailBlast']
+            path_file = data['pathFile']
+            periode = data['periodeBlastE']
+
+            isi_email_template = """ ... (isi tetap sama seperti sebelumnya) ... """
+
+            if insert:
+                # 🔹 Buat ID baru
+                id_email_blast = self.generate_id_email_blast(cursor)
+
+                # 🔹 Simpan ke tabel emailblast
+                cursor.execute("""
+                    INSERT INTO emailblast 
+                    (idEmailBlast, namaEmailBlast, tanggalMulaiEmailBlast, tanggalSelesaiEmailBlast, targetTahunLulusan, 
+                    statusEmailBlast, subjek, isiEmail, pathFile, periodeBlastE) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    id_email_blast,
+                    nama_email_blast,
+                    tanggal_mulai,
+                    tanggal_selesai,
+                    '-',  # targetTahunLulusan dikosongkan
+                    status_blast,
+                    subject,
+                    isi_email_template,
+                    path_file,
+                    periode
+                ))
+
+                # 🔥 FIX: Paksa update semua baris di penggunalulusan
+                cursor.execute("""
+                    UPDATE penggunalulusan 
+                    SET idEmailBlast = %s
+                """, (id_email_blast,))
+                
+                rows_affected = cursor.rowcount
+                print(f"🛠 {rows_affected} baris penggunalulusan berhasil DIUPDATE dengan idEmailBlast {id_email_blast}")
+
+                conn.commit()
+                print(f"✅ EmailBlast berhasil disimpan dengan ID {id_email_blast} dan semua penggunalulusan diperbarui.")
+                return id_email_blast
+
+            # 🔸 Kalau bukan insert
+            if 'idEmailBlast' not in data:
+                return jsonify({"error": "idEmailBlast tidak ditemukan"}), 400
+
+            # 🔄 Kirim email jika status aktif
+            if status_blast == 'A':
+                cursor.execute("""
+                    SELECT namaPLulusan, namaPerusahaan, email 
+                    FROM penggunalulusan 
+                    WHERE idEmailBlast = %s AND email IS NOT NULL AND email != ''
+                """, (data['idEmailBlast'],))
+                users = cursor.fetchall()
+
+                for user in users:
+                    email = user['email']
+                    name = user['namaPLulusan']
+                    perusahaan = user.get('namaPerusahaan', '-')
+                    sapaan = "Bapak/Ibu"
+
+                    body = isi_email_template.format(
+                        sapaan=sapaan,
+                        nama=name,
+                        prodi=perusahaan,
+                        username="-",
+                        password="-"
+                    )
+
+                    try:
+                        self.send_email(email, subject, body)
+                        print(f"📤 Email dikirim ke {email}")
+                    except Exception as e:
+                        print(f"❌ Gagal kirim ke {email}: {e}")
+            else:
+                print("⛔ Status Nonaktif, tidak kirim email.")
+
+            return jsonify({"message": "Email blast diproses."})
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        finally:
+            if cursor: cursor.close()
+            if conn: conn.close()
+
+    def aktifkan_email_blast_plulusan(self, idEmailBlast):
+        try:
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor(dictionary=True)
+
+            # Ambil data email blast
+            cursor.execute("SELECT * FROM emailblast WHERE idEmailBlast = %s", (idEmailBlast,))
+            email_blast = cursor.fetchone()
+            if not email_blast:
+                return jsonify({"error": "Email blast tidak ditemukan."}), 404
+
+            now = datetime.now()
+            periode_blast_e = email_blast.get('periodeBlastE')
+
+            # ✅ Convert periodeBlastE ke datetime jika masih string
+            if isinstance(periode_blast_e, str):
+                try:
+                    periode_blast_e = datetime.strptime(periode_blast_e, "%Y-%m-%d %H:%M:%S")
+                except:
+                    return jsonify({"error": "Format periodeBlastE tidak valid."}), 400
+
+            # 🚫 Tunda aktivasi jika belum waktunya
+            if periode_blast_e and now < periode_blast_e:
+                cursor.execute("UPDATE emailblast SET statusEmailBlast = 'N' WHERE idEmailBlast = %s", (idEmailBlast,))
+                conn.commit()
+                return jsonify({
+                    "message": f"⏳ Email blast belum aktif. Tunggu hingga {periode_blast_e.strftime('%Y-%m-%d %H:%M:%S')}."
+                }), 200
+
+            # Kirim email jika belum aktif
+            if email_blast['statusEmailBlast'] != 'A':
+                cursor.execute("""
+                    SELECT namaPLulusan, namaPerusahaan, email 
+                    FROM penggunalulusan 
+                    WHERE idEmailBlast = %s AND email IS NOT NULL AND email != ''
+                """, (idEmailBlast,))
+                users = cursor.fetchall()
+
+                isi_email_template = email_blast['isiEmail']
+                subject = email_blast['subjek']
+                attachment_path = email_blast.get('pathFile')
+                full_attachment_path = os.path.join(os.getcwd(), attachment_path) if attachment_path else None
+                file_ada = full_attachment_path and os.path.isfile(full_attachment_path)
+
+                pesan_logs = []
+
+                for user in users:
+                    now_str = datetime.now().strftime('%d/%b/%Y %H:%M:%S')
+                    email = user['email'].strip()
+                    name = user.get('namaPLulusan', '').strip()
+                    perusahaan = user.get('namaPerusahaan', '-')
+
+                    if not name or '@' not in email or '.' not in email:
+                        pesan_logs.append(f"[{now_str}] ❌ EMAIL TIDAK VALID: {email} ({name})")
+                        continue
+
+                    sapaan = 'Bapak/Ibu'
+                    body = isi_email_template.format(
+                        sapaan=sapaan,
+                        nama=name,
+                        prodi=perusahaan,
+                        username="-",
+                        password="-"
+                    )
+
+                    try:
+                        if file_ada:
+                            self.send_email(email, subject, body, attachment=full_attachment_path)
+                        else:
+                            self.send_email(email, subject, body)
+                        pesan_logs.append(f"[{now_str}] ✅ Email terkirim ke {email}")
+                    except Exception as e:
+                        pesan_logs.append(f"[{now_str}] ❌ GAGAL kirim ke {email}: {str(e)}")
+
+                # Update status jadi aktif
+                cursor.execute("UPDATE emailblast SET statusEmailBlast = 'A' WHERE idEmailBlast = %s", (idEmailBlast,))
+
+                # Simpan log
+                cursor.execute("SELECT COUNT(*) AS total FROM emailblastinglog")
+                total_logs = cursor.fetchone()['total'] + 1
+                id_log = f"log00{total_logs}"
+
+                cursor.execute("""
+                    INSERT INTO emailblastinglog (
+                        idLog, idEmailBlast, namaBlast, tanggalMulai, tanggalSelesai, jumlah, status, pesanLogging
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    id_log,
+                    idEmailBlast,
+                    email_blast['namaEmailBlast'],
+                    email_blast['tanggalMulaiEmailBlast'],
+                    email_blast['tanggalSelesaiEmailBlast'],
+                    len(users),
+                    'S',
+                    "\n".join(pesan_logs)
+                ))
+
+                conn.commit()
+                return jsonify({"message": "✅ Email blast berhasil dikirim."}), 200
+
+            else:
+                return jsonify({"message": "ℹ️ Email blast sudah aktif sebelumnya."}), 200
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        finally:
+            if cursor: cursor.close()
+            if conn: conn.close() 
+
+    def nonaktifkan_email_blast_plulusan(self, idEmailBlast):
+        try:
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE emailblast SET statusEmailBlast = 'N' WHERE idEmailBlast = %s
+            """, (idEmailBlast,))
+            conn.commit()
+            return jsonify({"message": "Email blast berhasil dinonaktifkan."})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        finally:
+            if cursor: cursor.close()
+            if conn: conn.close()
+
+    def blast_email_pesan_plulusan(self):
+        data = request.form.to_dict()
+        print("DATA DITERIMA:", data)
+        try:
+            scheduled_time = datetime.strptime(data['periodeBlastE'], "%Y-%m-%d %H:%M:%S")
+            now = datetime.now()
+            if scheduled_time > now:
+                print("⏳ Menjadwalkan email pada:", scheduled_time)
+                @copy_current_request_context
+                def scheduled_job():
+                    self.run_blast_job_custompesan_Plulusan(data)
+                return jsonify({"message": f"Email dijadwalkan pada {scheduled_time}"}), 200
+            else:
+                return self.run_blast_job_custompesan_Plulusan(data)
+        except Exception as e:
+            return jsonify({"error": f"Format periodeBlastE salah: {str(e)}"}), 400
+        
+    def run_blast_job_custompesan_Plulusan(self, data):
+        try:
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor(dictionary=True)
+
+            tahun_lulus = int(data['targetTahunLulusan']) 
+            subject = data['subjek']
+            nama_email_blast = data['namaEmailBlast']
+            isi_email = data['isiEmail']
+            periode = data['periodeBlastE']
+            id_email_blast = data.get('idEmailBlast')
+
+            uploaded_file = request.files.get('file')
+            path_file = None
+
+            if uploaded_file and uploaded_file.filename != '':
+                if allowed_file(uploaded_file.filename):
+                    filename = f"{uuid.uuid4().hex}_{secure_filename(uploaded_file.filename)}"
+                    save_path = os.path.join(UPLOAD_FOLDER, filename)
+                    uploaded_file.save(save_path)
+                    path_file = save_path.replace("\\", "/")
+                else:
+                    return jsonify({"error": "Jenis file tidak diizinkan"}), 400
+            else:
+                path_file = data.get('pathFile', '')
+
+            cursor.execute("""
+                SELECT nama, email 
+                FROM lulusan 
+                WHERE tahunLulus = %s 
+                AND email IS NOT NULL 
+                AND email != ''
+            """, (tahun_lulus,))
+            users = cursor.fetchall()
+
+            if id_email_blast:
+                cursor.execute("""
+                    UPDATE emailblast SET 
+                        namaEmailBlast=%s, 
+                        targetTahunLulusan=%s, 
+                        subjek=%s, 
+                        isiEmail=%s, 
+                        pathFile=%s
+                    WHERE idEmailBlast=%s
+                """, (
+                    nama_email_blast, tahun_lulus, 
+                    subject, isi_email, path_file, id_email_blast
+                ))
+            else:
+                id_email_blast = self.generate_id_email_blast(cursor)
+                cursor.execute("""
+                    INSERT INTO emailblast 
+                    (idEmailBlast, namaEmailBlast, targetTahunLulusan, 
+                    subjek, isiEmail, pathFile, periodeBlastE) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    id_email_blast, nama_email_blast, tahun_lulus, 
+                    subject, isi_email, path_file, periode
+                ))
+
+            conn.commit()
+            return jsonify({"message": "Data email blast tersimpan tanpa mengirim email!"})
+        
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        finally:
+            if cursor: cursor.close()
+            if conn: conn.close()
+
+    def blast_email_update_only_Plulusan(self):
+        data = request.json
+        print("DATA DITERIMA UNTUK UPDATE:", data)
+        if 'idEmailBlast' not in data:
+            return jsonify({"error": "idEmailBlast wajib diisi untuk update"}), 400
+        try:
+            return self.update_plulusan(data)
+        except Exception as e:
+            return jsonify({"error": f"Gagal update: {str(e)}"}), 500
+        
+
+    def update_plulusan(self, data):
+        try:
+            conn = mysql.connector.connect(**DB_CONFIG)
+            cursor = conn.cursor(dictionary=True)
+
+            subject = data['subjek']
+            nama_email_blast = data['namaEmailBlast']
+            isi_email = data['isiEmail']
+            tanggal_mulai = data['tanggalMulaiEmailBlast']
+            tanggal_selesai = data['tanggalSelesaiEmailBlast']
+            path_file = data['pathFile']
+            target_lulus = data['targetTahunLulusan']
+            id_email_blast = data['idEmailBlast']
+
+            cursor.execute("""
+                UPDATE emailblast SET 
+                    namaEmailBlast=%s, 
+                    tanggalMulaiEmailBlast=%s, 
+                    tanggalSelesaiEmailBlast=%s,
+                    subjek=%s, 
+                    isiEmail=%s, 
+                    pathFile=%s, 
+                    targetTahunLulusan=%s
+                WHERE idEmailBlast=%s
+            """, (
+                nama_email_blast, tanggal_mulai, tanggal_selesai,
+                subject, isi_email, path_file, target_lulus, id_email_blast
+            ))
+
+            conn.commit()
+            return jsonify({"message": "EmailBlast berhasil di-update"}), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        finally:
+            if cursor: cursor.close()
+            if conn: conn.close()
+
+

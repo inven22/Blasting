@@ -43,3 +43,28 @@ def register_routes(app, scheduler):
     @app.route('/api/manual-blast/<idEmailBlast>', methods=['POST'])
     def manual_blast(idEmailBlast):
         return email_service_instance.manual_blast(idEmailBlast)
+    
+    @app.route('/api/email-blast-pengguna-lulusan', methods=['POST'])
+    def blast_email_plulusan():
+        data = request.get_json()  # Ambil data dari request
+        return email_service_instance.blast_email_plulusan(data)  # Kirim ke method
+    
+    @app.route('/api/aktifkan_email_blast_plulusan/<idEmailBlast>', methods=['POST'])
+    def aktifkan_email_blast_plulusan(idEmailBlast):
+        return email_service_instance.aktifkan_email_blast_plulusan(idEmailBlast)
+    
+    @app.route('/api/nonaktifkan_email_blast-penggunalulusan/<idEmailBlast>', methods=['POST'])
+    def nonaktifkan_email_blast_plulusan(idEmailBlast):
+        return email_service_instance.nonaktifkan_email_blast_plulusan(idEmailBlast)
+    
+    @app.route('/api/custom-pesan-penggunalulusan', methods=['PUT'])
+    def blast_email_pesan_plulusan():
+        return email_service_instance.blast_email_pesan_plulusan()
+    
+    @app.route('/api/email-blast-update-penggunalulusan', methods=['PUT'])
+    def blast_email_update_only_Plulusan():
+        return email_service_instance.blast_email_update_only_Plulusan()
+
+
+
+
