@@ -344,7 +344,7 @@ class EmailService:
 
 
     
-    def update(self, data): 
+     def update(self, data): 
         try:
             data = request.get_json()
 
@@ -356,7 +356,9 @@ class EmailService:
             subjek = data.get('subjek', '')
             isiEmail = data.get('isiEmail', '')
             pathFile = data.get('pathFile', '')
-            periodeBlastE = data['periodeBlastE']  # format: "2025-07-10 08:00:00,2025-07-12 09:30:00"
+
+            # ✅ Konversi ke string JSON untuk disimpan ke DB
+            periodeBlastE = json.dumps(data['periodeBlastE'])
 
             conn = mysql.connector.connect(**DB_CONFIG)
             cursor = conn.cursor()
