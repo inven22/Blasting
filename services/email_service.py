@@ -344,7 +344,7 @@ class EmailService:
 
 
     
-     def update(self, data): 
+    def update(self, data): 
         try:
             data = request.get_json()
 
