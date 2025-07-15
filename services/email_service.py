@@ -1372,6 +1372,7 @@ class EmailService:
             path_file = data['pathFile']
             target_lulus = data['targetTahunLulusan']
             id_email_blast = data['idEmailBlast']
+            periodeBlastE = data['periodeBlastE']
 
             cursor.execute("""
                 UPDATE emailblast SET 
@@ -1380,12 +1381,13 @@ class EmailService:
                     tanggalSelesaiEmailBlast=%s,
                     subjek=%s, 
                     isiEmail=%s, 
-                    pathFile=%s, 
+                    pathFile=%s,
+                    periodeBlastE=%s, 
                     targetTahunLulusan=%s
                 WHERE idEmailBlast=%s
             """, (
                 nama_email_blast, tanggal_mulai, tanggal_selesai,
-                subject, isi_email, path_file, target_lulus, id_email_blast
+                subject, isi_email, path_file, periodeBlastE, target_lulus, id_email_blast
             ))
 
             conn.commit()
@@ -1395,6 +1397,7 @@ class EmailService:
         finally:
             if cursor: cursor.close()
             if conn: conn.close()
+
 
 
     def manual_blast_plulusan(self,idEmailBlast):
