@@ -1,0 +1,21 @@
+isi_email_template: |
+  Yth. {Panggilan} {Nama}
+  {NamaPsh}
+  {LokasiPsh}
+
+  Selamat Sore,
+
+  Semoga senantiasa {Panggilan} dalam keadaan sehat dan berbahagia. Perkenalkan kami dari Tim Tracer Study POLBAN (Politeknik Negeri Bandung).
+
+  Dalam upaya peningkatan mutu lulusan agar memiliki kemampuan yang handal sebagai profesional di bidang kerjanya masing-masing, kami mengharapkan tanggapan pengguna lulusan terkait kinerja lulusan POLBAN yang bekerja di Instansi/Perusahaan Bapak/Ibu melalui survey kepuasan pengguna lulusan pada tautan https://bit.ly/SurveyPenggunaLulusanPOLBANTh2024
+
+  Daftar lulusan yang perlu {Panggilan} berikan penilaian kinerjanya adalah
+  {daftarLulusan}
+
+  Survey ini bersifat terbatas, dan hasilnya akan digunakan sebagai bahan evaluasi internal POLBAN terhadap kinerja lulusannya. Besar harapan kami agar data kepuasan pengguna lulusan dapat kami terima sebelum akhir November 2024.
+
+  Atas perhatian dan perkenan {Panggilan}, kami ucapkan terima kasih.
+
+  Salam,
+  Tim Tracer Study POLBAN 2024
+  Politeknik Negeri Bandung

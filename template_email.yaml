@@ -1,0 +1,29 @@
+isi_email_template: |
+  Alumni POLBAN yang kami banggakan,
+
+  Apa kabar {sapaan} {nama}, Alumni {prodi}? Semoga {sapaan} senantiasa dalam keadaan sehat, sejahtera, dan bahagia. Aamiin YRA.
+
+  Perkenalkan, kami dari Tim Tracer Study POLBAN tahun 2023. Maksud kami menghubungi {sapaan} {nama} adalah untuk mengajak berpartisipasi dalam kegiatan tracer study (penelusuran alumni) yang rutin dilakukan tiap tahun oleh POLBAN.
+
+  Tracer study merupakan kegiatan pengumpulan informasi rekam jejak lulusan, untuk mengetahui transisi kompetensi yang dimiliki lulusan dari pendidikan tinggi menuju dunia kerja, serta menggali perolehan kompetensi dan jalur karir lulusan. Oleh karena itu, POLBAN melakukan survei kepada lulusan dan pengguna lulusan. {sapaan} {nama} diminta sebagai responden pengisi kuesioner tracer study. Penelusuran dilakukan secara online melalui tautan berikut:
+
+  http://penelusuranalumni.polban.ac.id
+
+  Data yang berhasil dikumpulkan dari tracer study POLBAN akan digunakan untuk kebutuhan evaluasi diri, re-akreditasi institusi dan prodi, serta sebagai acuan peningkatan mutu lulusan agar memiliki kompetensi yang handal dan profesional.
+
+  Periode pengisian kuesioner tracer study oleh lulusan dilaksanakan mulai hari ini sampai dengan 31 Oktober 2023. Mengingat pentingnya informasi yang diberikan untuk pengembangan institusi, jurusan, dan program studi, kami sangat mengharapkan data dan informasi tersebut dapat diterima sebelum tanggal tersebut.
+
+  Berikut data akun Anda:
+
+  Username : {username}  
+  Password : {password}
+
+  Setelah berhasil login, silakan segera ubah password serta periksa data diri pada menu Profile dan Edit Profile.
+
+  Jika mengalami kesulitan saat login, Anda dapat menghubungi surveyor atau mengirim email ke tracer.study@polban.ac.id.
+
+  Atas perhatian dan partisipasi {sapaan}, kami ucapkan terima kasih.
+
+  Salam,  
+  Tim Tracer Study POLBAN 2023  
+  Politeknik Negeri Bandung

@@ -1,0 +1,20 @@
+template_pesan: |
+  Kepada Alumni {daftarLulusan}
+  {NamaPsh}
+  {LokasiPsh}
+
+  {salam_waktu},
+
+  Semoga senantiasa dalam keadaan sehat dan berbahagia. Berdasarkan hasil respon survey s.d. tanggal 30 November 2022 yang masih minim,
+  maka kegiatan User Survey akan diperpanjang sampai tanggal 9 Desember 2022.
+
+  Mengingat pentingnya isian User Survey dalam upaya peningkatan mutu lulusan agar memiliki kemampuan yang handal sebagai profesional di bidang kerjanya masing-masing,
+  Kami mengingatkan kembali agar atasan Saudara memberikan penilaian terhadap kinerja lulusan POLBAN yang bekerja di Instansi/Perusahaan melalui survey kepuasan pengguna lulusan pada tautan
+  https://bit.ly/SurveyPenggunaLulusanPOLBAN. Mohon sekiranya informasi email ini dapat disampaikan kepada {Panggilan} {Nama} untuk menilai kinerja Saudara.
+
+  Survey ini bersifat terbatas, dan hasilnya akan digunakan sebagai bahan evaluasi internal POLBAN terhadap kinerja lulusannya. Besar harapan kami agar data kepuasan pengguna lulusan dapat kami terima sebelum tanggal 9 Desember 2022.
+
+  Atas perhatian dan perkenan, kami ucapkan terima kasih.
+  Salam,
+  Tim Tracer Study POLBAN 2022
+  Politeknik Negeri Bandung
