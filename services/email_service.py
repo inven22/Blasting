@@ -1400,7 +1400,7 @@ class EmailService:
 
 
 
-    def manual_blast_plulusan(self,idEmailBlast):
+    def manual_blast_plulusan(self, idEmailBlast):
         conn = None
         cursor = None
         try:
@@ -1418,7 +1418,6 @@ class EmailService:
                 return jsonify({"message": "❌ Email blast tidak ditemukan."}), 404
 
             template = email_blast.get('isiEmail') or """"""
-
             subject = email_blast.get('subjek') or 'Tanpa Subjek'
             attachment_path = email_blast.get('pathFile')
             full_attachment_path = os.path.join(os.getcwd(), attachment_path) if attachment_path else None
@@ -1454,12 +1453,12 @@ class EmailService:
                     gagal += 1
                     continue
 
-                # Ambil daftar lulusan dari relasi idPLulusan
+                # Ambil daftar lulusan dari relasi idPLulusan, kecuali yang sudah dinilai
                 cursor.execute("""
                     SELECT l.nama
                     FROM lulusan_penggunalulusan_tablerelasi r
                     JOIN lulusan l ON r.NIM = l.NIM
-                    WHERE r.idPLulusan = %s
+                    WHERE r.idPLulusan = %s AND (l.statusDinilai IS NULL OR l.statusDinilai != 'SS')
                 """, (id_plulusan,))
                 lulusan_rows = cursor.fetchall()
 
@@ -1480,9 +1479,9 @@ class EmailService:
 
                 try:
                     if file_ada:
-                         self.send_email(email, subject, body, attachment=full_attachment_path)
+                        self.send_email(email, subject, body, attachment=full_attachment_path)
                     else:
-                         self.send_email(email, subject, body)
+                        self.send_email(email, subject, body)
                     sukses += 1
                     pesan_logs.append(f"[{now_str}] ✅ Email terkirim ke {email}")
                 except Exception as e:
@@ -1528,3 +1527,4 @@ class EmailService:
         finally:
             if cursor: cursor.close()
             if conn: conn.close()
+
