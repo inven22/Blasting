@@ -683,7 +683,17 @@ class WhatsAppBlastService:
             return jsonify({"error": str(e)}), 500
         finally:
             if cursor: cursor.close()
-            if conn: conn.close()
+            if conn: conn.close() 
+
+    
+    def get_tahun_lulus_wa_plulusan(self):
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT cohort FROM lulusan WHERE cohort IS NOT NULL ORDER BY cohort DESC")
+        result = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return jsonify(result)
 
  
     def blast_wa_plulusan(self, data):
