@@ -127,7 +127,11 @@ def register_routes(app, scheduler):
     
     @app.route('/api/manual-blast-plulusan/<idEmailBlast>', methods=['POST'])
     def manual_blast_plulusan(idEmailBlast):
-        return email_service_instance.manual_blast_plulusan(idEmailBlast)
+        return email_service_instance.manual_blast_plulusan(idEmailBlast) 
+        
+    @app.route('/api/tahun_plulus_wa', methods=['GET'])
+    def get_tahun_lulus_wa_plulusa():
+        return wa_service_instance.get_tahun_lulus_wa_plulusan()
     
     
     
