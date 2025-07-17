@@ -783,7 +783,7 @@ class WhatsAppBlastService:
             conn = mysql.connector.connect(**DB_CONFIG)
             cursor = conn.cursor(dictionary=True)
 
-            tahun_lulus = int(data['targetType2'])
+            tahun_lulus = int(data['targetType2']) - 1  # 👈 cohort dikurangi 1 untuk dapat tahun lulus sebenarnya
             status_blast = data['StatusBlast2']
             tanggal_mulai = data['TanggalBlast2']
             tanggal_selesai = data['tanggalSelesaiBlast']
@@ -890,6 +890,9 @@ class WhatsAppBlastService:
         finally:
             cursor.close()
             conn.close()
+    
+
+
             
     
     def send_monthly_wa_job_plulusan(self, data):
